@@ -1,65 +1,97 @@
+import asyncio
 import logging
-import os
-import subprocess
-import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 
-def download_clips(tapo_cli_path, download_dir, lookback_days):
-    """
-    Invoke tapo-cli download-videos via subprocess.
+async def _download_segments(cam, cam_name, cam_dir, time_correction, date_str):
+    """Download all recording segments for one camera on one date. Returns list of Paths."""
+    try:
+        recordings = cam.getRecordingsList(date_str)
+    except Exception as exc:
+        logger.warning("[%s] Could not list recordings for %s: %s", cam_name, date_str, exc)
+        return []
 
-    Returns:
-        (clips, exit_code) where clips is a sorted list of Path objects
-        for every .mp4 found under download_dir (including pre-existing ones).
+    if not recordings:
+        return []
 
-    Never raises — errors are logged and exit_code is returned for the caller
-    to decide how to handle them.
-    """
-    os.makedirs(download_dir, exist_ok=True)
+    logger.info("[%s] %d segment(s) on %s", cam_name, len(recordings), date_str)
 
-    cmd = [
-        sys.executable,
-        os.path.expanduser(tapo_cli_path),
-        'download-videos',
-        '--days', str(lookback_days),
-        '--path', str(download_dir),
-        '--overwrite', '0',
-    ]
+    from pytapo.media_stream.downloader import Downloader
 
-    logger.info("Running tapo-cli: %s", ' '.join(cmd))
+    clips = []
+    for rec in recordings:
+        start, end = rec["startTime"], rec["endTime"]
+        dt = datetime.fromtimestamp(start)
+        filename = dt.strftime("%Y-%m-%d %H-%M-%S") + ".mp4"
+        out = cam_dir / filename
+
+        if out.exists():
+            logger.debug("[%s] Already downloaded: %s", cam_name, filename)
+            clips.append(out)
+            continue
+
+        logger.info("[%s] Downloading %s...", cam_name, filename)
+        try:
+            dl = Downloader(cam, start, end, time_correction, str(cam_dir), 50, filename)
+            async for _ in dl.download():
+                pass
+            clips.append(out)
+            logger.info("[%s] Done: %s (%.1f MB)", cam_name, filename, out.stat().st_size / 1e6)
+        except Exception as exc:
+            logger.error("[%s] Download failed for %s: %s", cam_name, filename, exc)
+
+    return clips
+
+
+async def _download_camera(name, ip, cloud_password, download_dir, lookback_days):
+    from pytapo import Tapo
+
+    cam_dir = Path(download_dir) / name
+    cam_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=3600,
-        )
-    except subprocess.TimeoutExpired:
-        logger.error("tapo-cli timed out after 1 hour")
-        # TODO: add email/webhook alerting here for download failures
-        return [], -1
+        cam = Tapo(ip, "admin", cloud_password)
+        time_correction = cam.getTimeCorrection()
+        logger.info("[%s] Connected to %s (time correction: %s)", name, ip, time_correction)
     except Exception as exc:
-        logger.error("Failed to launch tapo-cli: %s", exc, exc_info=True)
-        # TODO: add email/webhook alerting here for download failures
-        return [], -1
+        logger.error("[%s] Cannot connect to %s: %s", name, ip, exc)
+        return []
 
-    if result.stdout:
-        logger.debug("tapo-cli stdout:\n%s", result.stdout)
-    if result.stderr:
-        logger.debug("tapo-cli stderr:\n%s", result.stderr)
+    dates = [
+        (datetime.now() - timedelta(days=i)).strftime("%Y%m%d")
+        for i in range(lookback_days + 1)
+    ]
 
-    if result.returncode != 0:
-        logger.error(
-            "tapo-cli exited %d. stdout: %.500s",
-            result.returncode,
-            result.stdout,
-        )
-        # TODO: add email/webhook alerting here for download failures
+    clips = []
+    for date_str in dates:
+        try:
+            clips.extend(
+                await _download_segments(cam, name, cam_dir, time_correction, date_str)
+            )
+        except Exception as exc:
+            logger.warning("[%s] Unexpected error on %s: %s", name, date_str, exc)
 
-    clips = sorted(Path(download_dir).rglob('*.mp4'))
-    logger.info("Found %d clip(s) under %s", len(clips), download_dir)
-    return clips, result.returncode
+    return clips
+
+
+async def _run_all(cameras, cloud_password, download_dir, lookback_days):
+    tasks = [
+        _download_camera(name, ip, cloud_password, download_dir, lookback_days)
+        for name, ip in cameras.items()
+    ]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    clips = []
+    for r in results:
+        if isinstance(r, Exception):
+            logger.error("Camera task error: %s", r)
+        else:
+            clips.extend(r)
+    return clips
+
+
+def download_clips(cameras, cloud_password, download_dir, lookback_days):
+    """Download SD card footage from all cameras. Returns sorted list of Path objects."""
+    return sorted(asyncio.run(_run_all(cameras, cloud_password, download_dir, lookback_days)))

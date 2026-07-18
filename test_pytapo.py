@@ -1,23 +1,67 @@
 #!/usr/bin/env python3
 """
-Test script: connects to Tapo cameras via pytapo and lists SD card recordings.
+Tapo SD Card Connection Test
+=============================
+Run this script on the GYM PC (must be on the same WiFi as the cameras).
+It connects to each camera and lists recordings from the last 3 days.
+No footage is downloaded — this is just a connectivity and listing test.
 
-Before running:
-  pip install pytapo
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP-BY-STEP: HOW TO RUN THIS TEST ON THE GYM PC
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-HOW TO FIND YOUR CAMERA IPs:
-  1. Open the Tapo app on your phone
-  2. Tap a camera
-  3. Tap the gear icon (top-right, Settings)
-  4. Tap "Device Info"
-  5. Note the IP Address (looks like 192.168.X.X)
-  Do this for each camera and fill them in below.
+BEFORE YOU START:
+  - Make sure the gym PC is connected to the gym WiFi (same network as cameras)
+  - Make sure Python is installed (python.org → Download Python 3.12)
 
-NOTE: Run this while connected to the same WiFi as the cameras.
+STEP 1 — Install the required library (one-time only)
+  Open Command Prompt (search "cmd" in Start menu), then type:
+    pip install pytapo
+  Press Enter and wait for it to finish.
+
+STEP 2 — Verify camera IPs (optional but recommended)
+  The IPs below should already be correct:
+    Room 1: 192.168.0.190
+    Room 2: 192.168.0.24
+  To double-check: open the Tapo app → tap a camera → gear icon → Device Info → IP Address
+
+STEP 3 — Run the script
+  In Command Prompt, navigate to this folder:
+    cd "C:\path\to\TapoBackup"        (replace with the actual folder path)
+  Then run:
+    python test_pytapo.py
+  Press Enter.
+
+STEP 4 — Enter your Tapo account credentials
+  The script will ask for:
+    - Your Tapo account email (the one used to log into the Tapo app)
+    - Your Tapo account password (typing is hidden for security)
+
+STEP 5 — Read the results
+  ✓ GOOD result (cameras working):
+      Jiu-Jitsu Room 1 (192.168.0.190)
+      Connected ✓   Model: C220
+      2024-07-16 : 8 segment(s) found
+      2024-07-15 : 6 segment(s) found
+
+  ✗ BAD result (connection problem):
+      Could not connect: ...
+      - Not on the same WiFi as the cameras
+      - IP address is wrong
+      - Camera is offline
+
+WHAT THE NUMBERS MEAN:
+  "X segment(s) found" = the camera has X video clips in its SD card for that day.
+  A typical recording session (e.g. 7 PM - 8:40 PM) produces 8-20 segments.
+  If segments > 0, the full download pipeline will work.
+
+IF SOMETHING GOES WRONG:
+  - "No module named 'pytapo'" → run Step 1 again
+  - "Could not authenticate" → check your email/password
+  - "Could not connect" → make sure the PC is on the gym WiFi
+  - "0 segment(s)" on a day you know had recording → SD card may be full or camera offline
 """
 
-import json
-import os
 import sys
 from datetime import datetime, timedelta
 
@@ -25,62 +69,41 @@ try:
     from pytapo import Tapo
     from pytapo.auth import getCloudPassword
 except ImportError:
-    print("ERROR: pytapo is not installed.")
-    print("Run this first:  pip install pytapo")
+    print("\nERROR: pytapo is not installed.")
+    print("Open Command Prompt and run:  pip install pytapo")
     sys.exit(1)
 
 
-# ── FILL IN YOUR CAMERA IPs BEFORE RUNNING ────────────────────────────────
+# ── Camera IPs ─────────────────────────────────────────────────────────────
 CAMERAS = {
-    "Jiu-Jitsu Room 1": "192.168.0.190",   # <-- replace with real IP
-    "Jiu-Jitsu Room 2": "192.168.0.24",   # <-- replace with real IP
+    "Jiu-Jitsu Room 1": "192.168.0.190",
+    "Jiu-Jitsu Room 2": "192.168.0.24",
 }
 # ──────────────────────────────────────────────────────────────────────────
 
 
-def load_stored_email():
-    config_path = os.path.expanduser("~/.tapo-cli/.config")
-    try:
-        with open(config_path) as f:
-            return json.load(f).get("email", "")
-    except Exception:
-        return ""
-
-
 def main():
+    print()
     print("=" * 55)
     print("  Tapo SD Card Connection Test")
     print("=" * 55)
+    print()
 
-    # Check IPs have been filled in
-    if any("X.X" in ip for ip in CAMERAS.values()):
-        print("\nERROR: Fill in the camera IP addresses at the top")
-        print("of this file before running it.")
-        print("\nFind them in the Tapo app:")
-        print("  Tap camera → gear icon → Device Info → IP Address")
-        sys.exit(1)
-
-    # Get credentials
-    email = load_stored_email()
-    if email:
-        print(f"\nUsing stored account: {email}")
-    else:
-        email = input("\nTapo account email: ").strip()
+    email = input("Tapo account email: ").strip()
 
     import getpass
     password = getpass.getpass("Tapo account password: ")
 
-    # Use cloud credentials to get the camera's local auth password
-    print("\nConnecting to Tapo cloud to get camera password...")
+    print()
+    print("Connecting to Tapo cloud to get camera password...")
     try:
         cloud_pw = getCloudPassword(email, password)
-        print("Got camera password ✓")
+        print("Authentication successful ✓")
     except Exception as e:
-        print(f"\nERROR: Could not authenticate: {e}")
-        print("Double-check your email and password.")
+        print(f"\nERROR: Could not authenticate with Tapo cloud: {e}")
+        print("Check your email and password and try again.")
         sys.exit(1)
 
-    # Dates to check (today + last 2 days)
     dates = [
         (datetime.now() - timedelta(days=i)).strftime("%Y%m%d")
         for i in range(3)
@@ -97,30 +120,44 @@ def main():
             cam = Tapo(ip, "admin", cloud_pw)
             info = cam.getDeviceInfo()
             model = info.get("device_model", "unknown")
-            print(f"  Connected ✓   Model: {model}\n")
+            print(f"  Connected ✓   Model: {model}")
+            print()
 
+            total = 0
             for date_str in dates:
                 label = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}"
                 try:
                     recordings = cam.getRecordingsList(date_str)
                     count = len(recordings) if recordings else 0
-                    print(f"  {label} : {count} segment(s) found")
+                    total += count
+                    status = f"{count} segment(s)"
+                    if count == 0:
+                        status += "  (no recording or SD card empty)"
+                    print(f"  {label} : {status}")
                 except Exception as e:
                     print(f"  {label} : could not read — {e}")
+
+            print()
+            if total > 0:
+                print(f"  RESULT: {total} total segment(s) found — camera is working ✓")
+            else:
+                print("  RESULT: 0 segments found on all 3 days")
+                print("  Check: is the SD card inserted? Has there been any recording?")
 
         except Exception as e:
             print(f"  Could not connect: {e}")
             print()
             print("  Possible reasons:")
-            print("  - Not on the same WiFi as the cameras")
-            print("  - IP address is wrong")
-            print("  - Camera is offline")
+            print("  - PC is not on the same WiFi as the cameras")
+            print("  - IP address is wrong (check Tapo app: gear → Device Info)")
+            print("  - Camera is offline or restarting")
 
         print()
 
     print("=" * 55)
-    print("  Done.")
+    print("  Test complete.")
     print("=" * 55)
+    print()
 
 
 if __name__ == "__main__":

@@ -2,29 +2,41 @@ import os
 import yaml
 
 _DEFAULTS = {
-    'lookback_days': 1,
-    'local_retention_days': 0,
-    'gdrive_cap_bytes': 12 * 1024 ** 3,
-    'download_dir': './downloads',
-    'log_dir': './logs',
-    'credentials_dir': './credentials',
+    "lookback_days": 2,
+    "local_retention_days": 0,
+    "download_dir": "./downloads",
+    "log_dir": "./logs",
 }
 
-_REQUIRED = ['tapo_cli_path', 'gdrive_folder_id']
 
-
-def load_config(path='config.yaml'):
-    with open(path, 'r') as f:
+def load_config(path="config.yaml"):
+    with open(path) as f:
         cfg = yaml.safe_load(f)
 
-    for key, value in _DEFAULTS.items():
-        cfg.setdefault(key, value)
+    for key, val in _DEFAULTS.items():
+        cfg.setdefault(key, val)
 
-    for field in _REQUIRED:
-        if not cfg.get(field):
-            raise ValueError(f"Missing required config field: '{field}'")
+    # Environment variables override config file values
+    if os.environ.get("TAPO_EMAIL"):
+        cfg["tapo_email"] = os.environ["TAPO_EMAIL"]
+    cfg["tapo_password"] = os.environ.get("TAPO_PASSWORD", "")
 
-    if cfg['gdrive_folder_id'] == 'YOUR_FOLDER_ID_HERE':
-        raise ValueError("Set gdrive_folder_id in config.yaml before running.")
+    srv = cfg.setdefault("server", {})
+    for env_key, cfg_key in [
+        ("SSH_HOST", "host"),
+        ("SSH_USER", "username"),
+        ("SSH_PASSWORD", "password"),
+        ("SSH_KEY_PATH", "key_path"),
+        ("SSH_REMOTE_DIR", "remote_dir"),
+    ]:
+        if os.environ.get(env_key):
+            srv[cfg_key] = os.environ[env_key]
+    if os.environ.get("SSH_PORT"):
+        srv["port"] = int(os.environ["SSH_PORT"])
+
+    if not cfg.get("cameras"):
+        raise ValueError("No cameras configured in config.yaml")
+    if not cfg.get("tapo_password"):
+        raise ValueError("TAPO_PASSWORD not set — add it to your .env file")
 
     return cfg

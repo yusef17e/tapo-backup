@@ -1,32 +1,38 @@
-# tapo-drive-backup configuration
-# *** ONLY ONE LINE NEEDS EDITING — see INSTRUCTIONS.txt Step 5 ***
+# tapo-backup configuration
+# Secrets (passwords, IPs) go in the .env file — not here.
 
-# Path to the tapo-cli script (relative — do not change this line)
-tapo_cli_path: "../tapo-cli.py"
+# ── Cameras ────────────────────────────────────────────────────────────────
+# Format: "Display Name": "IP address"
+# Find the IP in the Tapo app: tap camera → gear icon → Device Info → IP Address
+cameras:
+  "Jiu-Jitsu Room 1": "192.168.0.190"
+  "Jiu-Jitsu Room 2": "192.168.0.24"
 
-# How many days of footage to fetch on each run.
-# 2 is recommended when using schedules — if the script didn't run one evening
-# it will still catch the previous session's clips on the next run.
+# ── Download ───────────────────────────────────────────────────────────────
+# How many days back to check for recordings on each run.
+# 2 is recommended: if the script misses a night it will catch it next run.
 lookback_days: 2
 
-# Local staging directory for downloaded clips
+# Where clips are saved locally before upload.
 download_dir: "./downloads"
 
-# Keep local copies for N days after upload as a safety buffer.
-# 0 = delete immediately after a successful upload.
+# Delete local copies immediately after successful upload (0 = delete right away).
+# Set to e.g. 3 to keep a 3-day local buffer.
 local_retention_days: 0
 
-# Google Drive
-# REQUIRED — get this from the Drive URL: drive.google.com/drive/folders/<ID>
-gdrive_folder_id: "YOUR_FOLDER_ID_HERE"
+# ── Server (SSH/SFTP) ──────────────────────────────────────────────────────
+# These values are overridden by SSH_* environment variables in .env.
+# Leave them blank here and fill in .env instead.
+server:
+  host: ""          # set SSH_HOST in .env
+  port: 22          # set SSH_PORT in .env (optional, defaults to 22)
+  username: ""      # set SSH_USER in .env
+  remote_dir: "/tapo-footage"  # set SSH_REMOTE_DIR in .env
 
-# Rotation cap. Default: 12 GB. Adjust if your quota differs.
-# Formula: GB * 1024^3
-gdrive_cap_bytes: 12884901888  # 12 GB
-
-# Recording schedule — only clips whose timestamps fall within these windows
-# will be uploaded to Drive. Days not listed are skipped entirely (no uploads).
-# Times use 24-hour clock (local camera time). Remove this block to upload all clips.
+# ── Schedule filter ────────────────────────────────────────────────────────
+# Only clips whose timestamps fall within these windows are uploaded.
+# Times are 24-hour local camera time. Days not listed are skipped entirely.
+# Remove this block to upload all clips regardless of time.
 schedules:
   monday:    {start: "19:00", end: "20:40"}
   tuesday:   {start: "19:00", end: "20:40"}
@@ -35,8 +41,5 @@ schedules:
   friday:    {start: "19:00", end: "20:40"}
   sunday:    {start: "11:00", end: "13:00"}
 
-# Logging
+# ── Logging ────────────────────────────────────────────────────────────────
 log_dir: "./logs"
-
-# OAuth credentials directory (contains credentials.json and token.json)
-credentials_dir: "./credentials"
