@@ -9,6 +9,7 @@ import datetime
 import logging
 import logging.handlers
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -17,7 +18,7 @@ from dotenv import load_dotenv
 load_dotenv()  # Load .env file if present (no-op when env vars are already set by Docker)
 
 from backup.config import load_config
-from backup.sftp import upload_clips
+from backup.sftp import rotate_server, upload_clips
 from backup.schedule import clip_in_schedule
 from backup.state import UploadState
 from backup.tapo import download_clips
@@ -47,6 +48,20 @@ logger = logging.getLogger(__name__)
 
 def run_download_stage(cfg):
     """Download from all cameras. Returns list of Path objects."""
+    # Guard: skip if disk is too full to safely store a night's footage
+    min_free_bytes = cfg.get("min_free_disk_gb", 10) * 1024 ** 3
+    download_dir = cfg["download_dir"]
+    os.makedirs(download_dir, exist_ok=True)
+    free = shutil.disk_usage(download_dir).free
+    if free < min_free_bytes:
+        logger.error(
+            "Low disk space: %.1f GB free, %.1f GB required. "
+            "Skipping download. Free up space or lower min_free_disk_gb in config.yaml.",
+            free / 1024 ** 3,
+            min_free_bytes / 1024 ** 3,
+        )
+        return []
+
     try:
         from pytapo.auth import getCloudPassword
         cloud_pw = getCloudPassword(cfg["tapo_email"], cfg["tapo_password"])
@@ -151,6 +166,21 @@ def run_upload_stage(cfg, clips, state):
     return uploaded, failed
 
 
+def run_rotation_stage(cfg):
+    """Delete old footage from server. Skips if server not configured or retention_days is 0."""
+    server = cfg.get("server", {})
+    if not server.get("host"):
+        return
+    retention_days = server.get("retention_days", 0)
+    if not retention_days:
+        return
+    try:
+        deleted = rotate_server(server, retention_days)
+        logger.info("Rotation stage: %d old clip(s) removed from server.", deleted)
+    except Exception as exc:
+        logger.error("Rotation stage failed: %s", exc, exc_info=True)
+
+
 def main():
     try:
         cfg = load_config()
@@ -170,6 +200,8 @@ def main():
     os.makedirs("data", exist_ok=True)
     state = UploadState(path="data/state.json")
     uploaded, failed = run_upload_stage(cfg, clips, state)
+
+    run_rotation_stage(cfg)
 
     logger.info(
         "=== Run complete: %d downloaded, %d uploaded, %d failed ===",

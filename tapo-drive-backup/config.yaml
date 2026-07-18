@@ -20,6 +20,12 @@ download_dir: "./downloads"
 # Set to e.g. 3 to keep a 3-day local buffer.
 local_retention_days: 0
 
+# Skip the download if the gym PC has less than this many GB free.
+# Prevents the hard drive from filling up if uploads fail for multiple days.
+# Tune this once you know how large a typical night's footage is.
+# Rule of thumb: set it to 2× the size of one full night's footage from both cameras.
+min_free_disk_gb: 10
+
 # ── Server (SSH/SFTP) ──────────────────────────────────────────────────────
 # These values are overridden by SSH_* environment variables in .env.
 # Leave them blank here and fill in .env instead.
@@ -28,6 +34,11 @@ server:
   port: 22          # set SSH_PORT in .env (optional, defaults to 22)
   username: ""      # set SSH_USER in .env
   remote_dir: "/tapo-footage"  # set SSH_REMOTE_DIR in .env
+
+  # Delete footage from the server that is older than this many days.
+  # 0 = keep everything forever (not recommended once you know your storage usage).
+  # Tune this based on your friend's server capacity and how far back you need clips.
+  retention_days: 30
 
 # ── Schedule filter ────────────────────────────────────────────────────────
 # Only clips whose timestamps fall within these windows are uploaded.
