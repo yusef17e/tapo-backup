@@ -52,21 +52,19 @@ STEP 5 — Create the secrets file
 
   Fill in the values (see table below), then save and close.
 
-  ┌──────────────────────┬──────────────────────────────────────────────────┐
-  │ Line                 │ What to put                                      │
-  ├──────────────────────┼──────────────────────────────────────────────────┤
-  │ TAPO_EMAIL=          │ Your Tapo app login email                        │
-  │ TAPO_PASSWORD=       │ Your Tapo app password                           │
-  │ CAMERA_IP_1=         │ Leave as-is (192.168.0.190)                      │
-  │ CAMERA_IP_2=         │ Leave as-is (192.168.0.24)                       │
-  │ SSH_HOST=            │ Your friend's server address (get from friend)   │
-  │ SSH_PORT=            │ Usually 22 (get from friend)                     │
-  │ SSH_USER=            │ Server username (get from friend)                │
-  │ SSH_PASSWORD=        │ Server password  (get from friend)               │
-  │ SSH_REMOTE_DIR=      │ Folder on server, e.g. /home/user/tapo-footage   │
-  └──────────────────────┴──────────────────────────────────────────────────┘
+  ┌─────────────────────┬───────────────────────────────────────────────────┐
+  │ Line                │ What to put                                       │
+  ├─────────────────────┼───────────────────────────────────────────────────┤
+  │ TAPO_EMAIL=         │ Your Tapo app login email                         │
+  │ TAPO_PASSWORD=      │ Your Tapo app password                            │
+  │ SSH_HOST=           │ Your friend's server address (get from friend)    │
+  │ SSH_PORT=           │ Usually 22 (get from friend)                      │
+  │ SSH_USER=           │ Server username (get from friend)                 │
+  │ SSH_PASSWORD=       │ Server password (get from friend)                 │
+  │ SSH_REMOTE_DIR=     │ Folder on server, e.g. /home/user/tapo-footage    │
+  └─────────────────────┴───────────────────────────────────────────────────┘
 
-  NOTE: If you don't have the server details yet, leave those SSH_ lines
+  NOTE: If you don't have the server details yet, leave the SSH_ lines
   blank for now. The download will still work; it just won't upload.
 
 
@@ -135,6 +133,66 @@ Open it in Notepad to see what the backup did each night.
 
 Each run produces a summary line like:
   === Run complete: 14 downloaded, 14 uploaded, 0 failed ===
+
+
+═══════════════════════════════════════════════════════════
+COMMON PROBLEMS AND FIXES
+═══════════════════════════════════════════════════════════
+
+PROBLEM: "python is not recognized as a command"
+FIX: Python was installed without "Add to PATH". Uninstall it
+     and install again, making sure to tick the checkbox.
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+PROBLEM: "No module named 'pytapo'"
+FIX: Run this in Command Prompt:   pip install pytapo
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+PROBLEM: Camera test shows "Could not connect"
+FIX: Make sure the gym PC is connected to the gym WiFi
+     (not a phone hotspot or different network).
+     Confirm camera IPs in the Tapo app:
+       tap camera → gear icon → Device Info → IP Address
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+PROBLEM: Camera test shows "Could not authenticate"
+FIX: Check your Tapo email and password. Try logging into
+     the Tapo app on your phone to confirm they are correct.
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+PROBLEM: "0 segment(s)" on days you know had recording
+FIX: Check that the SD card is inserted in the camera.
+     Open the Tapo app, tap the camera, and look for
+     the local storage / SD card section to confirm
+     footage exists.
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+PROBLEM: Backup runs but nothing uploads to server
+FIX: Make sure the SSH_ lines in .env are filled in
+     correctly. Check the log at:
+       C:\tapo-backup\logs\backup.log
+     Look for lines starting with "ERROR" for the cause.
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+PROBLEM: Docker says "cannot connect to Docker daemon"
+FIX: Docker Desktop is not running. Find the Docker icon
+     in the system tray (bottom-right of taskbar) and
+     wait for it to finish starting up.
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+PROBLEM: Backup stopped running automatically
+FIX: Open Task Scheduler (search it in Start menu), find
+     "TapoBackup-Nightly", and check if it shows an error.
+     Also make sure Docker Desktop starts with Windows:
+       Docker Desktop → Settings → General →
+       tick "Start Docker Desktop when you log in"
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

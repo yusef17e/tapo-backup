@@ -24,17 +24,10 @@ def _ensure_remote_dir(sftp, path):
         pass  # already exists (race or root)
 
 
-def upload_clips(server_cfg, clips):
-    """
-    Upload clips to SFTP server. Opens one connection for all files.
-    Returns set of Path objects that were successfully uploaded.
-    """
-    if not clips:
-        return set()
-
+def _connect(server_cfg):
+    """Open SSH connection. Raises on failure."""
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
     connect_kwargs = {
         "hostname": server_cfg["host"],
         "port": int(server_cfg.get("port", 22)),
@@ -46,10 +39,18 @@ def upload_clips(server_cfg, clips):
         connect_kwargs["key_filename"] = os.path.expanduser(key_path)
     else:
         connect_kwargs["password"] = server_cfg.get("password", "")
+    ssh.connect(**connect_kwargs)
+    logger.info("SFTP connected to %s", server_cfg["host"])
+    return ssh
+
+
+def upload_clips(server_cfg, clips):
+    """Upload clips to SFTP server. Returns set of Path objects successfully uploaded."""
+    if not clips:
+        return set()
 
     try:
-        ssh.connect(**connect_kwargs)
-        logger.info("SFTP connected to %s", server_cfg["host"])
+        ssh = _connect(server_cfg)
     except Exception as exc:
         logger.error("SFTP connection failed to %s: %s", server_cfg["host"], exc)
         return set()
@@ -61,12 +62,10 @@ def upload_clips(server_cfg, clips):
         sftp = ssh.open_sftp()
         for clip in clips:
             clip = Path(clip)
-            # Preserve camera subfolder under remote_base
             parts = clip.parts
             camera = parts[-2] if len(parts) >= 2 else "unknown"
             remote_dir = f"{remote_base}/{camera}"
             remote_path = f"{remote_dir}/{clip.name}"
-
             try:
                 _ensure_remote_dir(sftp, remote_dir)
                 sftp.put(str(clip), remote_path)
@@ -74,7 +73,6 @@ def upload_clips(server_cfg, clips):
                 succeeded.add(clip)
             except Exception as exc:
                 logger.error("Upload failed for %s: %s", clip.name, exc)
-
         sftp.close()
     finally:
         ssh.close()
@@ -85,23 +83,8 @@ def upload_clips(server_cfg, clips):
 
 def rotate_server(server_cfg, retention_days):
     """Delete footage on server older than retention_days. Returns count of files deleted."""
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-    connect_kwargs = {
-        "hostname": server_cfg["host"],
-        "port": int(server_cfg.get("port", 22)),
-        "username": server_cfg["username"],
-        "timeout": 30,
-    }
-    key_path = server_cfg.get("key_path")
-    if key_path:
-        connect_kwargs["key_filename"] = os.path.expanduser(key_path)
-    else:
-        connect_kwargs["password"] = server_cfg.get("password", "")
-
     try:
-        ssh.connect(**connect_kwargs)
+        ssh = _connect(server_cfg)
     except Exception as exc:
         logger.error("SFTP connection failed (rotation): %s", exc)
         return 0

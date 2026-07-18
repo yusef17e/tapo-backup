@@ -13,8 +13,7 @@ def load_config(path="config.yaml"):
     with open(path) as f:
         cfg = yaml.safe_load(f)
 
-    for key, val in _DEFAULTS.items():
-        cfg.setdefault(key, val)
+    cfg = _DEFAULTS | cfg  # config file values override defaults
 
     # Environment variables override config file values
     if os.environ.get("TAPO_EMAIL"):

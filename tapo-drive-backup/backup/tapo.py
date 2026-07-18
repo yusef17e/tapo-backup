@@ -77,21 +77,20 @@ async def _download_camera(name, ip, cloud_password, download_dir, lookback_days
     return clips
 
 
-async def _run_all(cameras, cloud_password, download_dir, lookback_days):
-    tasks = [
-        _download_camera(name, ip, cloud_password, download_dir, lookback_days)
-        for name, ip in cameras.items()
-    ]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    clips = []
-    for r in results:
-        if isinstance(r, Exception):
-            logger.error("Camera task error: %s", r)
-        else:
-            clips.extend(r)
-    return clips
-
-
 def download_clips(cameras, cloud_password, download_dir, lookback_days):
     """Download SD card footage from all cameras. Returns sorted list of Path objects."""
-    return sorted(asyncio.run(_run_all(cameras, cloud_password, download_dir, lookback_days)))
+    async def _run():
+        tasks = [
+            _download_camera(name, ip, cloud_password, download_dir, lookback_days)
+            for name, ip in cameras.items()
+        ]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        clips = []
+        for r in results:
+            if isinstance(r, Exception):
+                logger.error("Camera task error: %s", r)
+            else:
+                clips.extend(r)
+        return clips
+
+    return sorted(asyncio.run(_run()))
