@@ -1,0 +1,10 @@
+services:
+  tapo-backup:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - ./downloads:/app/downloads   # downloaded clips (deleted after upload)
+      - ./logs:/app/logs             # backup.log persists here
+      - ./data:/app/data             # state.json lives here (tracks what's uploaded)
+    restart: "no"

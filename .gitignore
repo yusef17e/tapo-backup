@@ -12,6 +12,7 @@ logs/
 tapo-drive-backup/logs/
 state.json
 tapo-drive-backup/state.json
+data/
 
 # Python
 __pycache__/

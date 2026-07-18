@@ -167,7 +167,8 @@ def main():
     clips = run_filter_stage(cfg, clips)
     logger.info("After schedule filter: %d clip(s) to upload.", len(clips))
 
-    state = UploadState()
+    os.makedirs("data", exist_ok=True)
+    state = UploadState(path="data/state.json")
     uploaded, failed = run_upload_stage(cfg, clips, state)
 
     logger.info(

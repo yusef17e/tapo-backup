@@ -1,0 +1,143 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  TAPO BACKUP — GYM PC SETUP GUIDE
+  (follow these steps in order, top to bottom)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+═══════════════════════════════════════════════════════════
+PART 1 — INSTALL REQUIRED SOFTWARE  (one-time)
+═══════════════════════════════════════════════════════════
+
+STEP 1 — Install Python
+  Go to: https://www.python.org/downloads/
+  Click "Download Python 3.12"
+  Run the installer.
+  *** IMPORTANT: on the first screen, tick the box that says
+      "Add Python to PATH" before clicking Install ***
+
+STEP 2 — Install Docker Desktop
+  Go to: https://www.docker.com/products/docker-desktop/
+  Download and install Docker Desktop for Windows.
+  After install, open Docker Desktop and wait until the
+  whale icon in the taskbar stops animating (it's ready).
+  *** Docker Desktop must be running whenever the backup runs ***
+
+STEP 3 — Install Git
+  Go to: https://git-scm.com/download/win
+  Download and run the installer (all defaults are fine).
+
+
+═══════════════════════════════════════════════════════════
+PART 2 — GET THE PROJECT FILES
+═══════════════════════════════════════════════════════════
+
+STEP 4 — Download the project
+  Open Command Prompt (search "cmd" in Start menu).
+  Type these two commands, pressing Enter after each:
+
+    cd C:\
+    git clone https://github.com/yusef17e/tapo-backup.git
+
+  This creates a folder at:  C:\tapo-backup
+
+STEP 5 — Create the secrets file
+  In Command Prompt:
+
+    cd C:\tapo-backup
+    copy .env.example .env
+
+  Now open the .env file in Notepad:
+
+    notepad .env
+
+  Fill in the values (see table below), then save and close.
+
+  ┌──────────────────────┬──────────────────────────────────────────────────┐
+  │ Line                 │ What to put                                      │
+  ├──────────────────────┼──────────────────────────────────────────────────┤
+  │ TAPO_EMAIL=          │ Your Tapo app login email                        │
+  │ TAPO_PASSWORD=       │ Your Tapo app password                           │
+  │ CAMERA_IP_1=         │ Leave as-is (192.168.0.190)                      │
+  │ CAMERA_IP_2=         │ Leave as-is (192.168.0.24)                       │
+  │ SSH_HOST=            │ Your friend's server address (get from friend)   │
+  │ SSH_PORT=            │ Usually 22 (get from friend)                     │
+  │ SSH_USER=            │ Server username (get from friend)                │
+  │ SSH_PASSWORD=        │ Server password  (get from friend)               │
+  │ SSH_REMOTE_DIR=      │ Folder on server, e.g. /home/user/tapo-footage   │
+  └──────────────────────┴──────────────────────────────────────────────────┘
+
+  NOTE: If you don't have the server details yet, leave those SSH_ lines
+  blank for now. The download will still work; it just won't upload.
+
+
+═══════════════════════════════════════════════════════════
+PART 3 — TEST THE CAMERAS  (before running the full backup)
+═══════════════════════════════════════════════════════════
+
+STEP 6 — Install the camera test library
+  In Command Prompt (still in C:\tapo-backup):
+
+    pip install pytapo
+
+STEP 7 — Run the camera test
+  In Command Prompt:
+
+    python test_pytapo.py
+
+  Enter your Tapo email and password when asked.
+
+  GOOD result — means cameras are working:
+    Jiu-Jitsu Room 1 (192.168.0.190)
+    Connected ✓   Model: C220
+    2024-07-16 : 8 segment(s) found
+
+  BAD result — means something is wrong:
+    Could not connect: ...
+    → Make sure the PC is on the gym WiFi
+    → Check the IP is correct in the Tapo app
+
+  Do not continue to Part 4 until both cameras show "Connected ✓".
+
+
+═══════════════════════════════════════════════════════════
+PART 4 — SET UP THE NIGHTLY AUTOMATIC BACKUP
+═══════════════════════════════════════════════════════════
+
+STEP 8 — Run the setup script
+  Find the file:  C:\tapo-backup\setup_schedule.ps1
+  Right-click it → "Run with PowerShell"
+
+  If Windows asks "Do you want to allow this app to make changes?"
+  click Yes.
+
+  The script will:
+  • Build the Docker image (takes a few minutes the first time)
+  • Create a scheduled task that runs every night at 9:00 PM
+
+  When it says "Done! TapoBackup-Nightly will run every night at 21:00"
+  you're finished.
+
+STEP 9 — Run a manual test backup (optional but recommended)
+  To make sure everything works before the first automatic run:
+
+    docker compose run --rm tapo-backup
+
+  Watch the output. You should see it connect to each camera,
+  download clips, and upload them to the server.
+
+
+═══════════════════════════════════════════════════════════
+CHECKING LOGS LATER
+═══════════════════════════════════════════════════════════
+
+Logs are saved in:  C:\tapo-backup\logs\backup.log
+Open it in Notepad to see what the backup did each night.
+
+Each run produces a summary line like:
+  === Run complete: 14 downloaded, 14 uploaded, 0 failed ===
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  DONE — the backup will now run every night at 9 PM
+  as long as Docker Desktop is running.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
