@@ -1,0 +1,42 @@
+# tapo-drive-backup configuration
+# *** ONLY ONE LINE NEEDS EDITING — see INSTRUCTIONS.txt Step 5 ***
+
+# Path to the tapo-cli script (relative — do not change this line)
+tapo_cli_path: "../tapo-cli.py"
+
+# How many days of footage to fetch on each run.
+# 2 is recommended when using schedules — if the script didn't run one evening
+# it will still catch the previous session's clips on the next run.
+lookback_days: 2
+
+# Local staging directory for downloaded clips
+download_dir: "./downloads"
+
+# Keep local copies for N days after upload as a safety buffer.
+# 0 = delete immediately after a successful upload.
+local_retention_days: 0
+
+# Google Drive
+# REQUIRED — get this from the Drive URL: drive.google.com/drive/folders/<ID>
+gdrive_folder_id: "YOUR_FOLDER_ID_HERE"
+
+# Rotation cap. Default: 12 GB. Adjust if your quota differs.
+# Formula: GB * 1024^3
+gdrive_cap_bytes: 12884901888  # 12 GB
+
+# Recording schedule — only clips whose timestamps fall within these windows
+# will be uploaded to Drive. Days not listed are skipped entirely (no uploads).
+# Times use 24-hour clock (local camera time). Remove this block to upload all clips.
+schedules:
+  monday:    {start: "19:00", end: "20:40"}
+  tuesday:   {start: "19:00", end: "20:40"}
+  wednesday: {start: "19:00", end: "20:40"}
+  thursday:  {start: "19:00", end: "20:40"}
+  friday:    {start: "19:00", end: "20:40"}
+  sunday:    {start: "11:00", end: "13:00"}
+
+# Logging
+log_dir: "./logs"
+
+# OAuth credentials directory (contains credentials.json and token.json)
+credentials_dir: "./credentials"

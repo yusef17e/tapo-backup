@@ -1,0 +1,25 @@
+# Secrets — never commit these
+.env
+
+# Tapo credentials
+credentials/
+tapo-drive-backup/credentials/
+
+# Generated at runtime
+downloads/
+tapo-drive-backup/downloads/
+logs/
+tapo-drive-backup/logs/
+state.json
+tapo-drive-backup/state.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Google OAuth (legacy — being removed)
+token.json

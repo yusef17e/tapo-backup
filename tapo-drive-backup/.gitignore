@@ -1,0 +1,9 @@
+credentials/
+downloads/
+logs/
+state.json
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
