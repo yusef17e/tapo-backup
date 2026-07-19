@@ -46,14 +46,14 @@ async def _download_segments(cam, cam_name, cam_dir, time_correction, date_str):
     return clips
 
 
-async def _download_camera(name, ip, cloud_password, download_dir, lookback_days):
+async def _download_camera(name, ip, cloud_email, cloud_password, download_dir, lookback_days):
     from pytapo import Tapo
 
     cam_dir = Path(download_dir) / name
     cam_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        cam = Tapo(ip, "admin", cloud_password, cloudPassword=cloud_password)
+        cam = Tapo(ip, cloud_email, cloud_password, cloudPassword=cloud_password)
         time_correction = cam.getTimeCorrection()
         logger.info("[%s] Connected to %s (time correction: %s)", name, ip, time_correction)
     except Exception as exc:
@@ -77,11 +77,11 @@ async def _download_camera(name, ip, cloud_password, download_dir, lookback_days
     return clips
 
 
-def download_clips(cameras, cloud_password, download_dir, lookback_days):
+def download_clips(cameras, cloud_email, cloud_password, download_dir, lookback_days):
     """Download SD card footage from all cameras. Returns sorted list of Path objects."""
     async def _run():
         tasks = [
-            _download_camera(name, ip, cloud_password, download_dir, lookback_days)
+            _download_camera(name, ip, cloud_email, cloud_password, download_dir, lookback_days)
             for name, ip in cameras.items()
         ]
         results = await asyncio.gather(*tasks, return_exceptions=True)

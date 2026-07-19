@@ -65,6 +65,7 @@ def run_download_stage(cfg):
     try:
         clips = download_clips(
             cameras=cfg["cameras"],
+            cloud_email=cfg["tapo_email"],
             cloud_password=cfg["tapo_password"],
             download_dir=cfg["download_dir"],
             lookback_days=cfg["lookback_days"],

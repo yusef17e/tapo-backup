@@ -106,7 +106,7 @@ def main():
         print("─" * 55)
 
         try:
-            cam = Tapo(ip, "admin", password, cloudPassword=password)
+            cam = Tapo(ip, email, password, cloudPassword=password)
             info = cam.getDeviceInfo()
             model = info.get("device_model", "unknown")
             print(f"  Connected ✓   Model: {model}")
