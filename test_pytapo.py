@@ -27,7 +27,7 @@ STEP 2 — Verify camera IPs (optional but recommended)
 
 STEP 3 — Run the script
   In Command Prompt, navigate to this folder:
-    cd "C:\path\to\TapoBackup"        (replace with the actual folder path)
+    cd "C:/path/to/TapoBackup"         (replace with the actual folder path)
   Then run:
     python test_pytapo.py
   Press Enter.
@@ -67,7 +67,6 @@ from datetime import datetime, timedelta
 
 try:
     from pytapo import Tapo
-    from pytapo.auth import getCloudPassword
 except ImportError:
     print("\nERROR: pytapo is not installed.")
     print("Open Command Prompt and run:  pip install pytapo")
@@ -94,16 +93,6 @@ def main():
     import getpass
     password = getpass.getpass("Tapo account password: ")
 
-    print()
-    print("Connecting to Tapo cloud to get camera password...")
-    try:
-        cloud_pw = getCloudPassword(email, password)
-        print("Authentication successful ✓")
-    except Exception as e:
-        print(f"\nERROR: Could not authenticate with Tapo cloud: {e}")
-        print("Check your email and password and try again.")
-        sys.exit(1)
-
     dates = [
         (datetime.now() - timedelta(days=i)).strftime("%Y%m%d")
         for i in range(3)
@@ -117,7 +106,7 @@ def main():
         print("─" * 55)
 
         try:
-            cam = Tapo(ip, "admin", cloud_pw)
+            cam = Tapo(ip, "admin", password, cloudPassword=password)
             info = cam.getDeviceInfo()
             model = info.get("device_model", "unknown")
             print(f"  Connected ✓   Model: {model}")

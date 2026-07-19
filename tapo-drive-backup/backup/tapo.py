@@ -53,7 +53,7 @@ async def _download_camera(name, ip, cloud_password, download_dir, lookback_days
     cam_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        cam = Tapo(ip, "admin", cloud_password)
+        cam = Tapo(ip, "admin", cloud_password, cloudPassword=cloud_password)
         time_correction = cam.getTimeCorrection()
         logger.info("[%s] Connected to %s (time correction: %s)", name, ip, time_correction)
     except Exception as exc:

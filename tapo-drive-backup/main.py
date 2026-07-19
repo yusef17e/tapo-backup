@@ -63,16 +63,9 @@ def run_download_stage(cfg):
         return []
 
     try:
-        from pytapo.auth import getCloudPassword
-        cloud_pw = getCloudPassword(cfg["tapo_email"], cfg["tapo_password"])
-    except Exception as exc:
-        logger.error("Could not get camera password from Tapo cloud: %s", exc)
-        return []
-
-    try:
         clips = download_clips(
             cameras=cfg["cameras"],
-            cloud_password=cloud_pw,
+            cloud_password=cfg["tapo_password"],
             download_dir=cfg["download_dir"],
             lookback_days=cfg["lookback_days"],
         )
