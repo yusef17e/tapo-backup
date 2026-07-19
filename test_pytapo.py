@@ -81,6 +81,81 @@ CAMERAS = {
 # ──────────────────────────────────────────────────────────────────────────
 
 
+def _try_auth(ip, user, password, cloud_pw=None):
+    """Try one auth combination. Returns (cam, label) or raises."""
+    kwargs = {"cloudPassword": cloud_pw} if cloud_pw else {}
+    cam = Tapo(ip, user, password, **kwargs)
+    cam.getDeviceInfo()  # confirms auth actually worked
+    return cam
+
+
+def _find_working_auth(ip, email, password):
+    """Try every known auth combination. Returns (cam, description) or None."""
+    attempts = [
+        # (user, password, cloudPassword, description)
+        ("admin",  password, password, "admin / cloud-pw / cloudPassword=cloud-pw"),
+        (email,    password, password, "email / cloud-pw / cloudPassword=cloud-pw"),
+        ("admin",  "admin",  password, "admin / admin    / cloudPassword=cloud-pw"),
+        ("admin",  password, None,     "admin / cloud-pw / no cloudPassword"),
+        ("admin",  "admin",  None,     "admin / admin    / no cloudPassword"),
+    ]
+    for user, pw, cpw, label in attempts:
+        try:
+            cam = _try_auth(ip, user, pw, cpw)
+            return cam, label
+        except Exception:
+            pass
+    return None, None
+
+
+def _run_camera(ip, name, email, password):
+    print("─" * 55)
+    print(f"  {name}  ({ip})")
+    print("─" * 55)
+
+    cam, label = _find_working_auth(ip, email, password)
+    if cam is None:
+        print("  Could not connect — all auth methods failed.")
+        print()
+        print("  Possible reasons:")
+        print("  - Wrong Tapo email or password")
+        print("  - PC is not on the same WiFi as the cameras")
+        print("  - IP address is wrong (check Tapo app: gear → Device Info)")
+        print()
+        return
+
+    info = cam.getDeviceInfo()
+    model = info.get("device_model", "unknown")
+    print(f"  Connected ✓   Model: {model}   Auth: {label}")
+    print()
+
+    dates = [
+        (datetime.now() - timedelta(days=i)).strftime("%Y%m%d")
+        for i in range(3)
+    ]
+    total = 0
+    for date_str in dates:
+        label_d = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}"
+        try:
+            recordings = cam.getRecordingsList(date_str)
+            count = len(recordings) if recordings else 0
+            total += count
+            status = f"{count} segment(s)"
+            if count == 0:
+                status += "  (no recording or SD card empty)"
+            print(f"  {label_d} : {status}")
+        except Exception as e:
+            print(f"  {label_d} : could not read — {e}")
+
+    print()
+    if total > 0:
+        print(f"  RESULT: {total} total segment(s) found — camera is working ✓")
+    else:
+        print("  RESULT: 0 segments found on all 3 days")
+        print("  Check: is the SD card inserted? Has there been any recording?")
+    print()
+
+
 def main():
     print()
     print("=" * 55)
@@ -91,57 +166,12 @@ def main():
     email = input("Tapo account email: ").strip()
 
     import getpass
-    password = getpass.getpass("Tapo account password: ")
-
-    dates = [
-        (datetime.now() - timedelta(days=i)).strftime("%Y%m%d")
-        for i in range(3)
-    ]
+    password = getpass.getpass("Tapo account password: ").strip()
 
     print()
 
     for name, ip in CAMERAS.items():
-        print("─" * 55)
-        print(f"  {name}  ({ip})")
-        print("─" * 55)
-
-        try:
-            cam = Tapo(ip, email, password, cloudPassword=password)
-            info = cam.getDeviceInfo()
-            model = info.get("device_model", "unknown")
-            print(f"  Connected ✓   Model: {model}")
-            print()
-
-            total = 0
-            for date_str in dates:
-                label = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}"
-                try:
-                    recordings = cam.getRecordingsList(date_str)
-                    count = len(recordings) if recordings else 0
-                    total += count
-                    status = f"{count} segment(s)"
-                    if count == 0:
-                        status += "  (no recording or SD card empty)"
-                    print(f"  {label} : {status}")
-                except Exception as e:
-                    print(f"  {label} : could not read — {e}")
-
-            print()
-            if total > 0:
-                print(f"  RESULT: {total} total segment(s) found — camera is working ✓")
-            else:
-                print("  RESULT: 0 segments found on all 3 days")
-                print("  Check: is the SD card inserted? Has there been any recording?")
-
-        except Exception as e:
-            print(f"  Could not connect: {e}")
-            print()
-            print("  Possible reasons:")
-            print("  - PC is not on the same WiFi as the cameras")
-            print("  - IP address is wrong (check Tapo app: gear → Device Info)")
-            print("  - Camera is offline or restarting")
-
-        print()
+        _run_camera(ip, name, email, password)
 
     print("=" * 55)
     print("  Test complete.")
