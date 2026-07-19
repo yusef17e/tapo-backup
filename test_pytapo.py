@@ -32,10 +32,13 @@ STEP 3 — Run the script
     python test_pytapo.py
   Press Enter.
 
-STEP 4 — Enter your Tapo account credentials
+STEP 4 — Enter your Camera Account credentials
+  NOT your main Tapo login — the Camera Account is separate.
+  Find it in the Tapo app:
+    tap camera → gear icon → Advanced Settings → Camera Account
   The script will ask for:
-    - Your Tapo account email (the one used to log into the Tapo app)
-    - Your Tapo account password (typing is hidden for security)
+    - Camera account username (e.g. "admin")
+    - Camera account password
 
 STEP 5 — Read the results
   ✓ GOOD result (cameras working):
@@ -89,15 +92,13 @@ def _try_auth(ip, user, password, cloud_pw=None):
     return cam
 
 
-def _find_working_auth(ip, email, password):
-    """Try every known auth combination. Returns (cam, description) or None."""
+def _find_working_auth(ip, cam_user, cam_pass):
+    """Try camera account credentials (+ a few fallbacks). Returns (cam, description) or None."""
     attempts = [
         # (user, password, cloudPassword, description)
-        ("admin",  password, password, "admin / cloud-pw / cloudPassword=cloud-pw"),
-        (email,    password, password, "email / cloud-pw / cloudPassword=cloud-pw"),
-        ("admin",  "admin",  password, "admin / admin    / cloudPassword=cloud-pw"),
-        ("admin",  password, None,     "admin / cloud-pw / no cloudPassword"),
-        ("admin",  "admin",  None,     "admin / admin    / no cloudPassword"),
+        (cam_user, cam_pass, None,      f"{cam_user!r} / camera-account-password"),
+        ("admin",  cam_pass, None,      f"admin / camera-account-password"),
+        (cam_user, cam_pass, cam_pass,  f"{cam_user!r} / camera-account-password / cloudPassword"),
     ]
     for user, pw, cpw, label in attempts:
         try:
@@ -109,12 +110,12 @@ def _find_working_auth(ip, email, password):
     return None, None
 
 
-def _run_camera(ip, name, email, password):
+def _run_camera(ip, name, cam_user, cam_pass):
     print("─" * 55)
     print(f"  {name}  ({ip})")
     print("─" * 55)
 
-    cam, label = _find_working_auth(ip, email, password)
+    cam, label = _find_working_auth(ip, cam_user, cam_pass)
     if cam is None:
         print("  Could not connect — all auth methods failed.")
         print()
@@ -164,14 +165,16 @@ def main():
     print("=" * 55)
     print()
 
-    email = input("Tapo account email: ").strip()
-
-    password = input("Tapo account password (visible so you can check for typos): ").strip()
+    print("  Find these in the Tapo app:")
+    print("  tap camera → gear icon → Advanced Settings → Camera Account")
+    print()
+    cam_user = input("Camera account username: ").strip()
+    cam_pass = input("Camera account password:  ").strip()
 
     print()
 
     for name, ip in CAMERAS.items():
-        _run_camera(ip, name, email, password)
+        _run_camera(ip, name, cam_user, cam_pass)
 
     print("=" * 55)
     print("  Test complete.")
