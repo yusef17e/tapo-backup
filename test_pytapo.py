@@ -103,8 +103,9 @@ def _find_working_auth(ip, email, password):
         try:
             cam = _try_auth(ip, user, pw, cpw)
             return cam, label
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"  [ ] {label}")
+            print(f"      → {type(e).__name__}: {e}")
     return None, None
 
 
@@ -165,8 +166,7 @@ def main():
 
     email = input("Tapo account email: ").strip()
 
-    import getpass
-    password = getpass.getpass("Tapo account password: ").strip()
+    password = input("Tapo account password (visible so you can check for typos): ").strip()
 
     print()
 
