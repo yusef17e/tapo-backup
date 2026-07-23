@@ -78,8 +78,8 @@ except ImportError:
 
 # ── Camera IPs ─────────────────────────────────────────────────────────────
 CAMERAS = {
-    "Jiu-Jitsu Room 1": "192.168.0.190",
-    "Jiu-Jitsu Room 2": "192.168.0.24",
+    "Jiu-Jitsu Room 1": {"ip": "192.168.0.190", "user": "JiuJitsuRoom1"},
+    "Jiu-Jitsu Room 2": {"ip": "192.168.0.24",  "user": "JiuJitsuRoom2"},
 }
 # ──────────────────────────────────────────────────────────────────────────
 
@@ -165,16 +165,12 @@ def main():
     print("=" * 55)
     print()
 
-    print("  Find these in the Tapo app:")
-    print("  tap camera → gear icon → Advanced Settings → Camera Account")
-    print()
-    cam_user = input("Camera account username: ").strip()
-    cam_pass = input("Camera account password:  ").strip()
+    cam_pass = input("Camera account password: ").strip()
 
     print()
 
-    for name, ip in CAMERAS.items():
-        _run_camera(ip, name, cam_user, cam_pass)
+    for name, cam in CAMERAS.items():
+        _run_camera(cam["ip"], name, cam["user"], cam_pass)
 
     print("=" * 55)
     print("  Test complete.")

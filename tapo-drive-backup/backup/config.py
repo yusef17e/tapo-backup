@@ -15,9 +15,6 @@ def load_config(path="config.yaml"):
 
     cfg = _DEFAULTS | cfg  # config file values override defaults
 
-    # Environment variables override config file values
-    if os.environ.get("TAPO_EMAIL"):
-        cfg["tapo_email"] = os.environ["TAPO_EMAIL"]
     cfg["tapo_password"] = os.environ.get("TAPO_PASSWORD", "")
 
     srv = cfg.setdefault("server", {})

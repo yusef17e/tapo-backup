@@ -5,8 +5,12 @@
 # Format: "Display Name": "IP address"
 # Find the IP in the Tapo app: tap camera → gear icon → Device Info → IP Address
 cameras:
-  "Jiu-Jitsu Room 1": "192.168.0.190"
-  "Jiu-Jitsu Room 2": "192.168.0.24"
+  "Jiu-Jitsu Room 1":
+    ip: "192.168.0.190"
+    user: "JiuJitsuRoom1"
+  "Jiu-Jitsu Room 2":
+    ip: "192.168.0.24"
+    user: "JiuJitsuRoom2"
 
 # ── Download ───────────────────────────────────────────────────────────────
 # How many days back to check for recordings on each run.
