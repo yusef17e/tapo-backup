@@ -6,5 +6,5 @@ host = input("Camera IP: ").strip()
 user = input("Camera account username (e.g. admin): ").strip()
 password = getpass.getpass("Camera account password: ")
 
-tapo = Tapo(host, user, password)
+tapo = Tapo(host, user, password, printDebugInformation=True)
 print(tapo.getBasicInfo())
