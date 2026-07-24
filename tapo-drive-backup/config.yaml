@@ -8,9 +8,11 @@ cameras:
   "Jiu-Jitsu Room 1":
     ip: "192.168.0.190"
     user: "JiuJitsuRoom1"
+    app_name: "Jiu-Jitsu Room 1"   # name as it appears in the Tapo app — update if different
   "Jiu-Jitsu Room 2":
     ip: "192.168.0.24"
     user: "JiuJitsuRoom2"
+    app_name: "Jiu-Jitsu Room 2"   # name as it appears in the Tapo app — update if different
 
 # ── Download ───────────────────────────────────────────────────────────────
 # How many days back to check for recordings on each run.

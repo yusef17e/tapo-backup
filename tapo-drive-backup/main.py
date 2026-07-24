@@ -21,7 +21,7 @@ from backup.config import load_config
 from backup.sftp import rotate_server, upload_clips
 from backup.schedule import clip_in_schedule
 from backup.state import UploadState
-from backup.tapo import download_clips
+from backup.tapo_app import download_clips
 
 
 def setup_logging(log_dir, level=logging.INFO):
@@ -65,9 +65,9 @@ def run_download_stage(cfg):
     try:
         clips = download_clips(
             cameras=cfg["cameras"],
-            cloud_password=cfg["tapo_password"],
             download_dir=cfg["download_dir"],
             lookback_days=cfg["lookback_days"],
+            schedules=cfg.get("schedules", {}),
         )
         return clips
     except Exception as exc:
