@@ -84,35 +84,41 @@ CAMERAS = {
 # ──────────────────────────────────────────────────────────────────────────
 
 
-def _try_auth(ip, user, password):
+def _try_auth(ip, user, password, cloud_pw=None):
     """Try one auth combination. Returns cam or raises."""
-    cam = Tapo(ip, user, password)
-    cam.getDeviceInfo()  # confirms auth actually worked
+    kwargs = {"cloudPassword": cloud_pw} if cloud_pw else {}
+    cam = Tapo(ip, user, password, **kwargs)
+    cam.getDeviceInfo()
     return cam
 
 
-def _find_working_auth(ip, cam_user, cam_pass):
-    """Try camera account credentials (+ admin fallback). Returns (cam, description) or None."""
+def _find_working_auth(ip, cam_user, cam_pass, cloud_email, cloud_pass):
+    """Try every plausible credential combo. Returns (cam, description) or None."""
     attempts = [
-        (cam_user, cam_pass, f"{cam_user!r} / camera-account-password"),
-        ("admin",  cam_pass, f"admin / camera-account-password"),
+        (cam_user,    cam_pass,  None,       f"{cam_user!r} / cam-pass"),
+        ("admin",     cam_pass,  None,       f"admin / cam-pass"),
+        (cam_user,    cam_pass,  cloud_pass, f"{cam_user!r} / cam-pass / cloudPassword=cloud-pass"),
+        ("admin",     cam_pass,  cloud_pass, f"admin / cam-pass / cloudPassword=cloud-pass"),
+        (cloud_email, cloud_pass, cloud_pass, f"email / cloud-pass / cloudPassword=cloud-pass"),
+        ("admin",     cloud_pass, cloud_pass, f"admin / cloud-pass / cloudPassword=cloud-pass"),
+        (cloud_email, cloud_pass, None,       f"email / cloud-pass"),
     ]
-    for user, pw, label in attempts:
+    for user, pw, cpw, label in attempts:
         try:
-            cam = _try_auth(ip, user, pw)
+            cam = _try_auth(ip, user, pw, cpw)
             return cam, label
         except Exception as e:
             print(f"  [ ] {label}")
-            print(f"      → {type(e).__name__}: {e}")
+            print(f"      → {e}")
     return None, None
 
 
-def _run_camera(ip, name, cam_user, cam_pass):
+def _run_camera(ip, name, cam_user, cam_pass, cloud_email, cloud_pass):
     print("─" * 55)
     print(f"  {name}  ({ip})")
     print("─" * 55)
 
-    cam, label = _find_working_auth(ip, cam_user, cam_pass)
+    cam, label = _find_working_auth(ip, cam_user, cam_pass, cloud_email, cloud_pass)
     if cam is None:
         print("  Could not connect — all auth methods failed.")
         print()
@@ -162,12 +168,14 @@ def main():
     print("=" * 55)
     print()
 
-    cam_pass = input("Camera account password: ").strip()
+    cam_pass    = input("Camera account password (from JJ): ").strip()
+    cloud_email = input("Your Tapo cloud email:             ").strip()
+    cloud_pass  = input("Your Tapo cloud password:          ").strip()
 
     print()
 
     for name, cam in CAMERAS.items():
-        _run_camera(cam["ip"], name, cam["user"], cam_pass)
+        _run_camera(cam["ip"], name, cam["user"], cam_pass, cloud_email, cloud_pass)
 
     print("=" * 55)
     print("  Test complete.")
